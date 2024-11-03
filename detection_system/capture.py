@@ -1,13 +1,188 @@
 # detection_system/capture.py
-from IPython.display import display, Javascript, clear_output
-from google.colab.output import eval_js
-import numpy as np
+
 import cv2
+import numpy as np
 import time
-from base64 import b64decode
+import logging
 from typing import Optional
+from IPython.display import display, Javascript, clear_output
+from google.colab.patches import cv2_imshow
+from base64 import b64decode
+from google.colab.output import eval_js
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class WebcamCapture:
+    def __init__(self):
+        self.is_initialized = False
+        
+    def start(self) -> bool:
+        """Initialize and start the webcam capture."""
+        js_code = """
+        async function initializeWebcam() {
+            // Clean up any existing elements
+            const cleanup = () => {
+                const existingVideo = document.querySelector('#captureVideo');
+                const existingCanvas = document.querySelector('#captureCanvas');
+                if (existingVideo) existingVideo.remove();
+                if (existingCanvas) existingCanvas.remove();
+            };
+            
+            cleanup();
+            
+            // Create new elements
+            const video = document.createElement('video');
+            const canvas = document.createElement('canvas');
+            
+            // Set IDs for reliable querying
+            video.id = 'captureVideo';
+            canvas.id = 'captureCanvas';
+            
+            // Hide elements
+            video.style.display = 'none';
+            canvas.style.display = 'none';
+            
+            // Add to document
+            document.body.appendChild(video);
+            document.body.appendChild(canvas);
+            
+            try {
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                // Set up video
+                video.srcObject = stream;
+                
+                // Wait for video to be ready
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = async () => {
+                        try {
+                            await video.play();
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            resolve();
+                        } catch (err) {
+                            console.error('Error playing video:', err);
+                            throw err;
+                        }
+                    };
+                });
+                
+                return true;
+            } catch (err) {
+                console.error('Error initializing webcam:', err);
+                cleanup();
+                return false;
+            }
+        }
+        
+        // Initialize immediately
+        await initializeWebcam();
+        """
+        
+        try:
+            display(Javascript(js_code))
+            time.sleep(3)  # Give time for initialization
+            self.is_initialized = True
+            return True
+        except Exception as e:
+            logger.error(f"Failed to start webcam: {str(e)}")
+            return False
+            
+    def read_frame(self) -> Optional[np.ndarray]:
+        """Capture and return a frame from the webcam."""
+        if not self.is_initialized:
+            return None
+            
+        js_code = """
+        const video = document.querySelector('#captureVideo');
+        const canvas = document.querySelector('#captureCanvas');
+        
+        if (!video || !canvas) {
+            return null;
+        }
+        
+        try {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        } catch (err) {
+            console.error('Error capturing frame:', err);
+            return null;
+        }
+        """
+        
+        try:
+            frame_data = eval_js(js_code)
+            if frame_data is None or not isinstance(frame_data, str):
+                return None
+                
+            # Extract the base64 encoded image data
+            image_data = frame_data.split(',')[1]
+            image_bytes = b64decode(image_data)
+            
+            # Convert to numpy array and decode
+            jpg_as_np = np.frombuffer(image_bytes, dtype=np.uint8)
+            frame = cv2.imdecode(jpg_as_np, flags=1)
+            
+            return frame
+            
+        except Exception as e:
+            logger.error(f"Error reading frame: {str(e)}")
+            return None
+
+    def stop(self) -> bool:
+        """Stop the webcam capture and clean up resources."""
+        if not self.is_initialized:
+            return True
+            
+        js_code = """
+        try {
+            const video = document.querySelector('#captureVideo');
+            const canvas = document.querySelector('#captureCanvas');
+            
+            if (video) {
+                const stream = video.srcObject;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                video.remove();
+            }
+            
+            if (canvas) {
+                canvas.remove();
+            }
+            
+            return true;
+        } catch (err) {
+            console.error('Error stopping webcam:', err);
+            return false;
+        }
+        """
+        
+        try:
+            result = eval_js(js_code)
+            self.is_initialized = False
+            return bool(result)
+        except Exception as e:
+            logger.error(f"Error stopping webcam: {str(e)}")
+            self.is_initialized = False
+            return False
+
+    def __enter__(self):
+        """Context manager entry."""
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.stop()
     def __init__(self):
         # JavaScript code is now wrapped in an IIFE (Immediately Invoked Function Expression)
         # to ensure proper initialization and scoping
@@ -20,7 +195,7 @@ class WebcamCapture:
                 
                 // Create new elements
                 window.video = document.createElement('video');
-                window.canvas = document.createElement('canvas');
+                window.canvas = document.createElement('caanvas');
                 
                 // Configure video element
                 window.video.style.display = 'none';
