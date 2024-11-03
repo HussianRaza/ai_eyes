@@ -3,7 +3,9 @@
 # detection_system/visualization.py
 import cv2
 import numpy as np
-from .models import Detection, FrameResults
+from typing import Tuple, Optional
+
+from detection_system.models import Detection, FrameResults
 
 class Visualizer:
     def __init__(self):
