@@ -5,6 +5,7 @@ import time
 from typing import Optional
 from google.colab.patches import cv2_imshow
 from IPython.display import clear_output
+import cv2
 from detection_system.models import DetectionModel , FrameResults
 from detection_system.processor import FrameProcessor
 from detection_system.capture import WebcamCapture, VideoCapture
