@@ -1,11 +1,4 @@
-def setup_colab():
-    # Install required packages
-    !pip install ultralytics opencv-python
-    
-    # Mount Google Drive
-    from google.colab import drive
-    drive.mount('/content/drive')
-    
+
   
 
 def main():
@@ -48,6 +41,4 @@ def main():
             print("\nInvalid choice. Please try again.")
 
 if __name__ == "__main__":
-    print("Setting up Colab environment...")
-    setup_colab()
     main()

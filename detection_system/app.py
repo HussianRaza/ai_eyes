@@ -3,9 +3,9 @@
 # detection_system/app.py
 import time
 from typing import Optional
-from .models import DetectionModel
-from .processor import FrameProcessor
-from .capture import WebcamCapture, VideoCapture
+from detection_system.models import DetectionModel
+from detection_system.processor import FrameProcessor
+from detection_system.capture import WebcamCapture, VideoCapture
 
 class DetectionApp:
     def __init__(

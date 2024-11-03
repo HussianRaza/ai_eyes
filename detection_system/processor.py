@@ -3,8 +3,8 @@
 import cv2
 import numpy as np
 from typing import Tuple
-from .models import DetectionModel, FrameResults
-from .visualization import Visualizer
+from detection_system.models import DetectionModel, FrameResults
+from detection_system.visualization import Visualizer
 
 class FrameProcessor:
     def __init__(
