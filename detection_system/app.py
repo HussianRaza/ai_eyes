@@ -26,21 +26,32 @@ class DetectionApp:
         """Run real-time currency and object detection on webcam feed"""
         capture = WebcamCapture()
         print("Initializing webcam...")
-        capture.start()
         
         try:
+            capture.start()
+            print("Webcam started successfully")
+            
             frame_count = 0
             last_time = time.time()
             fps = 0
+            failed_frames = 0
+            max_failed_frames = 10
             
             while True:
                 try:
                     frame = capture.read_frame()
                     if frame is None:
-                        print("Error reading frame. Retrying...")
-                        time.sleep(0.1)
+                        failed_frames += 1
+                        if failed_frames > max_failed_frames:
+                            print("Too many failed frame captures. Restarting webcam...")
+                            capture.stop()
+                            time.sleep(1)
+                            capture.start()
+                            failed_frames = 0
                         continue
-                        
+                    
+                    failed_frames = 0  # Reset counter on successful frame
+                    
                     # Process frame
                     processed_frame, results = self.processor.process_frame(frame)
                     
@@ -83,4 +94,8 @@ class DetectionApp:
         except KeyboardInterrupt:
             print("\nStopping detection...")
         finally:
-            capture.stop()
+            try:
+                capture.stop()
+                print("Webcam stopped successfully")
+            except Exception as e:
+                print(f"Error stopping webcam: {str(e)}")

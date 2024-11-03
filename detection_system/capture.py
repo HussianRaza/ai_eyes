@@ -11,20 +11,22 @@ from google.colab.output import eval_js
 class WebcamCapture:
     def __init__(self):
         js_code = """
-            var video = document.createElement('video');
-            var canvas = document.createElement('canvas');
+            // Define elements in global scope
+            window.video = document.createElement('video');
+            window.canvas = document.createElement('canvas');
             
-            async function startWebcam() {
+            // Define functions in global scope
+            window.startWebcam = async function() {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
-                    video.style.display = 'none';
-                    canvas.style.display = 'none';
-                    document.body.appendChild(video);
-                    document.body.appendChild(canvas);
-                    await video.play();
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    window.video.srcObject = stream;
+                    window.video.style.display = 'none';
+                    window.canvas.style.display = 'none';
+                    document.body.appendChild(window.video);
+                    document.body.appendChild(window.canvas);
+                    await window.video.play();
+                    window.canvas.width = window.video.videoWidth;
+                    window.canvas.height = window.video.videoHeight;
                     return true;
                 } catch(err) {
                     console.error("Error starting webcam:", err);
@@ -32,23 +34,23 @@ class WebcamCapture:
                 }
             }
             
-            async function captureFrame() {
+            window.captureFrame = function() {
                 try {
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    return canvas.toDataURL('image/jpeg');
+                    window.canvas.getContext('2d').drawImage(window.video, 0, 0);
+                    return window.canvas.toDataURL('image/jpeg');
                 } catch(err) {
                     console.error("Error capturing frame:", err);
                     return null;
                 }
             }
             
-            async function stopWebcam() {
+            window.stopWebcam = function() {
                 try {
-                    const stream = video.srcObject;
+                    const stream = window.video.srcObject;
                     const tracks = stream.getTracks();
                     tracks.forEach(track => track.stop());
-                    video.remove();
-                    canvas.remove();
+                    window.video.remove();
+                    window.canvas.remove();
                     return true;
                 } catch(err) {
                     console.error("Error stopping webcam:", err);
@@ -64,15 +66,22 @@ class WebcamCapture:
         time.sleep(3)  # Give time for webcam to initialize
         
     def read_frame(self) -> Optional[np.ndarray]:
-        frame_data = eval_js('captureFrame()')
-        if frame_data is None:
+        try:
+            frame_data = eval_js('captureFrame()')
+            if frame_data is None:
+                return None
+                
+            # Convert JS data to OpenCV image
+            image_bytes = b64decode(frame_data.split(',')[1])
+            jpg_as_np = np.frombuffer(image_bytes, dtype=np.uint8)
+            frame = cv2.imdecode(jpg_as_np, flags=1)
+            return frame
+        except Exception as e:
+            print(f"Error reading frame: {str(e)}")
             return None
-            
-        # Convert JS data to OpenCV image
-        image_bytes = b64decode(frame_data.split(',')[1])
-        jpg_as_np = np.frombuffer(image_bytes, dtype=np.uint8)
-        frame = cv2.imdecode(jpg_as_np, flags=1)
-        return frame
         
     def stop(self) -> None:
-        eval_js('stopWebcam()')
+        try:
+            eval_js('stopWebcam()')
+        except Exception as e:
+            print(f"Error stopping webcam: {str(e)}")
