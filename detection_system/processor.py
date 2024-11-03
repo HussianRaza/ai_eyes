@@ -2,8 +2,8 @@
 # detection_system/processor.py
 import cv2
 import numpy as np
-from typing import Tuple
-from detection_system.models import DetectionModel, FrameResults
+from typing import Tuple, List
+from detection_system.models import DetectionModel, FrameResults, Detection
 from detection_system.visualization import Visualizer
 
 class FrameProcessor:

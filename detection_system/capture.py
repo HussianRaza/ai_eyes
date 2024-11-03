@@ -16,7 +16,7 @@ class WebcamCapture:
 
 
     def _create_js(self) -> Javascript:
-    return Javascript('''
+        return Javascript('''
         async function initWebcam() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
